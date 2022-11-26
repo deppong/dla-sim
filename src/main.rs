@@ -12,18 +12,20 @@ const WIDTH: u32 = 800;
 const HEIGHT: u32 = 800;
 
 fn put_pixel(x: u32, y: u32, color: Color, framedata: &mut Vec<u8>) {
-    framedata[((x + y * WIDTH)*4 + 0) as usize] = color.b;
-    framedata[((x + y * WIDTH)*4 + 1) as usize] = color.g;
-    framedata[((x + y * WIDTH)*4 + 2) as usize] = color.r;
-    framedata[((x + y * WIDTH)*4 + 3) as usize] = color.a;
+    if x > 0 && y > 0 && x < WIDTH && y < HEIGHT {
+        framedata[((x + y * WIDTH)*4 + 0) as usize] = color.b;
+        framedata[((x + y * WIDTH)*4 + 1) as usize] = color.g;
+        framedata[((x + y * WIDTH)*4 + 2) as usize] = color.r;
+        framedata[((x + y * WIDTH)*4 + 3) as usize] = color.a;
+    }
 }
 
+#[derive(Copy, Clone, PartialEq)]
 struct Particle {
     x: u32,
     y: u32,
     moving: bool,
 }
-
 
 fn main() {
     let sdl_context = sdl2::init().unwrap();
@@ -42,6 +44,24 @@ fn main() {
 
     let mut particles: Vec<Particle> = vec![];
 
+    // starting particle 
+    particles.push(Particle{
+        x: WIDTH / 2,
+        y: HEIGHT / 2,
+        moving: false,
+    });
+
+    let mut rng = rand::thread_rng();
+
+    for _ in 0..100 {
+        particles.push(Particle{
+            x: rng.gen_range(0..WIDTH),
+            y: rng.gen_range(0..HEIGHT),
+            moving: true,
+        });
+    }
+            
+
     'running: loop {
         for event in event_pump.poll_iter() {
             match event {
@@ -53,6 +73,28 @@ fn main() {
             }
         }
 
+
+        // update moving
+        for i in &mut particles {
+            // I would love to use some lovely higher order functions here but I think I just
+            // don't quite understand exactly how to do this properly
+            if i.moving && i.x > 0 && i.y > 0 && i.x < WIDTH && i.y < HEIGHT  {
+                let dir = rng.gen_range(0..4);
+                match dir {
+                    0 => { i.x -= 1 },
+                    1 => { i.x += 1 },
+                    2 => { i.y -= 1 },
+                    3 => { i.y += 1 },
+                    _ => (),
+                }
+            }
+        }
+
+        // draw all static pixels
+        particles.iter()
+        //    .filter(|p| !p.moving)
+            .for_each(|p| put_pixel(p.x, p.y, Color::WHITE, &mut framedata));
+        
 
         canvas.clear();
         framebuffer.update(None, &framedata, (WIDTH*4) as usize).expect("Texture update failed");
